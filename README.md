@@ -6,24 +6,27 @@ This repository contains the **Control Detection Task (CDT)** experiment package
 
 ### Scientific Background
 
-The sense of agency is increasingly understood as an **inferential, context-sensitive process** rather than a binary signal. Our perception of control depends not only on current sensorimotor congruence but also on **history**: previous stimuli and previous choices systematically bias current judgments of control.
-
-This project frames agency as a **multi-timescale inference process**, where the brain integrates sensorimotor evidence and recent history over variable temporal windows that adapt to task complexity and uncertainty.
+The sense of agency is increasingly understood as an **inferential, context-sensitive process** rather than a binary signal. Our perception of control depends not only on current sensorimotor signals but also on **prior expectations**. This project investigates how learned cue-based expectations influence control detection and subjective agency judgments.
 
 ### Research Questions
 
-1. **Two-process structure**: Does stimulus history produce repulsive effects while choice history produces attractive effects on agency judgments?
-2. **Complexity-dependent integration**: Does task complexity (2 vs 4 response alternatives) modulate the temporal integration window for agency-related decisions?
-3. **Subjective-objective alignment**: Do subjective agency ratings show the same multi-timescale structure as objective performance?
+1. **Expectation effects on control detection**: Do learned cues that predict task difficulty bias control detection performance?
+2. **Cue-congruency effects**: Does performance differ when the actual difficulty matches vs. mismatches the cued expectation?
+3. **Rotation disruption**: How do visuomotor rotations (0° vs 90°) affect control detection and learning?
 
 ### The Task
 
-Participants view moving shapes on screen while controlling a mouse. One shape's movement direction is influenced by the participant's mouse movements (the "target"), while other shapes follow pre-recorded trajectories. Participants must:
-1. Identify which shape they controlled (2AFC or 4AFC)
-2. Rate their confidence in the choice
-3. Rate how much control they felt over the chosen shape (sense of agency)
+Participants view two shapes (square and circle) moving on screen while controlling a mouse. One shape's movement direction is influenced by the participant's mouse movements (the "target"), while the other shape follows a pre-recorded trajectory. Participants must identify which shape they controlled by pressing a key.
 
-The control level (how much the target follows mouse direction) is calibrated individually using adaptive staircases, then varied systematically to examine history effects on both performance and subjective agency.
+### Experimental Design
+
+The experiment uses a **cue-based expectation learning paradigm**:
+
+1. **Calibration Phase**: Adaptive staircase procedures determine each participant's detection threshold
+2. **Learning Phase**: Colored cues (e.g., red/blue) are paired with different difficulty levels (easy/hard), allowing participants to learn cue-difficulty associations
+3. **Test Phase**: Cues are presented but difficulty is held constant (medium), testing whether learned expectations bias control detection
+
+Two rotation conditions (0° and 90° visuomotor rotation) are tested in separate blocks with counterbalanced order and color-difficulty mappings.
 
 ---
 
@@ -31,19 +34,15 @@ This is a complete, standalone package for running the Control Detection Task ex
 
 ## 📁 Folder Structure
 
-### `Multi Timescale Inference/`
-- **`MT Inference.py`** - Main experiment script for the multi-timescale inference study
-- **`MT_Inference_Analysis.py`** - Comprehensive analysis script implementing:
-  - Lag-by-lag logistic regression (stimulus and choice history effects)
-  - Exponential decay model fitting (temporal integration window estimation)
-  - Mixed-effects models with participant random effects
-  - Agency rating analysis
-- **`Agency as multi-timescale inference process.txt`** - Theoretical framework and hypotheses
+### `Main_Experiment/`
+- **`CDT_windows_blockwise_fast_response.py`** - Main experiment script with cue-based expectation learning
+- **`documents/`** - Participant information sheets, consent forms, and experimenter protocols
 - **`data/subjects/`** - Participant data files
 
-### `Main_Experiment/`
-- **`CDT_windows_blockwise_fast_response.py`** - Original main experiment script
-- **`CDT_pilot_quest_convergence.py`** - Pilot script for testing QUEST+ convergence
+### `Multi Timescale Inference/`
+- **`MT Inference.py`** - Subproject: Multi-timescale inference study (2-shape vs 4-shape conditions)
+- **`MT_Inference_Analysis.py`** - Analysis script for history effects and temporal integration
+- **`data/subjects/`** - Participant data files
 
 ### `Motion_Library/`
 - **`core_pool.npy`** - Filtered motion trajectories (1600 trajectories, 800 target + 800 distractor)
@@ -88,11 +87,12 @@ python analyze_group_posteriors.py
 
 ## 📊 Key Features
 
-- **Filtered Motion Library**: 1600 high-quality trajectories (800 target, 800 distractor)
-- **QUEST+ Adaptive Algorithm**: Converges to participant-specific thresholds
-- **Two Rotation Conditions**: 0° and 90° blocks
-- **Fast Response Mode**: Early responses allowed during 5-second trials
-- **Comprehensive Analysis**: Group-level convergence monitoring
+- **Cue-Based Expectation Learning**: Colored cues signal different difficulty levels
+- **Adaptive Calibration**: Staircase procedures find individual detection thresholds
+- **Counterbalanced Design**: Learning order, color-difficulty mappings, and rotation conditions fully counterbalanced
+- **Two Rotation Conditions**: 0° (congruent) and 90° (rotated) visuomotor mapping
+- **Fast Response Mode**: Early responses allowed during motion phase
+- **Filtered Motion Library**: 1600 high-quality pre-recorded trajectories
 
 ## ⚙️ System Requirements
 
