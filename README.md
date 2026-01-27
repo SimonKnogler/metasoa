@@ -1,11 +1,48 @@
 # CDT Experiment Package
 
+## Project Overview
+
+This repository contains the **Control Detection Task (CDT)** experiment package, designed to investigate the **sense of agency** — the subjective experience of controlling one's actions and their effects in the world.
+
+### Scientific Background
+
+The sense of agency is increasingly understood as an **inferential, context-sensitive process** rather than a binary signal. Our perception of control depends not only on current sensorimotor congruence but also on **history**: previous stimuli and previous choices systematically bias current judgments of control.
+
+This project frames agency as a **multi-timescale inference process**, where the brain integrates sensorimotor evidence and recent history over variable temporal windows that adapt to task complexity and uncertainty.
+
+### Research Questions
+
+1. **Two-process structure**: Does stimulus history produce repulsive effects while choice history produces attractive effects on agency judgments?
+2. **Complexity-dependent integration**: Does task complexity (2 vs 4 response alternatives) modulate the temporal integration window for agency-related decisions?
+3. **Subjective-objective alignment**: Do subjective agency ratings show the same multi-timescale structure as objective performance?
+
+### The Task
+
+Participants view moving shapes on screen while controlling a mouse. One shape's movement direction is influenced by the participant's mouse movements (the "target"), while other shapes follow pre-recorded trajectories. Participants must:
+1. Identify which shape they controlled (2AFC or 4AFC)
+2. Rate their confidence in the choice
+3. Rate how much control they felt over the chosen shape (sense of agency)
+
+The control level (how much the target follows mouse direction) is calibrated individually using adaptive staircases, then varied systematically to examine history effects on both performance and subjective agency.
+
+---
+
 This is a complete, standalone package for running the Control Detection Task experiment.
 
 ## 📁 Folder Structure
 
+### `Multi Timescale Inference/`
+- **`MT Inference.py`** - Main experiment script for the multi-timescale inference study
+- **`MT_Inference_Analysis.py`** - Comprehensive analysis script implementing:
+  - Lag-by-lag logistic regression (stimulus and choice history effects)
+  - Exponential decay model fitting (temporal integration window estimation)
+  - Mixed-effects models with participant random effects
+  - Agency rating analysis
+- **`Agency as multi-timescale inference process.txt`** - Theoretical framework and hypotheses
+- **`data/subjects/`** - Participant data files
+
 ### `Main_Experiment/`
-- **`CDT_windows_blockwise_fast_response.py`** - Main experiment script
+- **`CDT_windows_blockwise_fast_response.py`** - Original main experiment script
 - **`CDT_pilot_quest_convergence.py`** - Pilot script for testing QUEST+ convergence
 
 ### `Motion_Library/`
