@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="220" viewBox="0 0 960 220">
+  <style>
+    .txt { font-family: Arial, sans-serif; font-size: 16px; fill: #222; }
+    .cap { font-weight: bold; }
+    .box { fill: #e8f0fe; stroke: #3367d6; stroke-width: 2; }
+    .box2 { fill: #eaf7ea; stroke: #2e7d32; stroke-width: 2; }
+    .box3 { fill: #fff3e0; stroke: #ef6c00; stroke-width: 2; }
+    .arrow { stroke: #555; stroke-width: 2; marker-end: url(#arr); }
+    .note { font-size: 14px; fill: #444; }
+  </style>
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#555" />
+    </marker>
+  </defs>
+
+  <rect x="30" y="40" width="200" height="60" class="box"/>
+  <text x="40" y="75" class="txt cap">Cue (Color)</text>
+  <text x="40" y="95" class="txt note">Expectation: low/high</text>
+
+  <line x1="230" y1="70" x2="280" y2="70" class="arrow"/>
+
+  <rect x="280" y="40" width="420" height="60" class="box2"/>
+  <text x="290" y="70" class="txt cap">Motion</text>
+  <text x="290" y="95" class="txt note">Up to 5s; early response allowed</text>
+
+  <line x1="700" y1="70" x2="750" y2="70" class="arrow"/>
+
+  <rect x="750" y="40" width="180" height="60" class="box3"/>
+  <text x="760" y="70" class="txt cap">Response</text>
+  <text x="760" y="95" class="txt note">A=Square, S=Circle</text>
+
+  <text x="280" y="135" class="txt note">Evidence computed per frame: speed × (cos(target) − cos(distractor))</text>
+  <text x="280" y="155" class="txt note">Feedback: yes in calibration/learning; none in test</text>
+  <text x="280" y="175" class="txt note">Ratings (test only): confidence and agency (1–7)</text>
+</svg>

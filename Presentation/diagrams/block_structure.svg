@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="320" viewBox="0 0 1080 320">
+  <style>
+    .txt { font-family: Arial, sans-serif; font-size: 16px; fill: #222; }
+    .cap { font-weight: bold; }
+    .blk { fill: #f5f5f5; stroke: #757575; stroke-width: 2; }
+    .angle { font-size: 14px; fill: #333; }
+    .palette { font-size: 14px; fill: #333; }
+    .legend { font-size: 14px; }
+  </style>
+
+  <!-- Blocks -->
+  <rect x="30" y="40" width="180" height="80" class="blk"/>
+  <text x="40" y="70" class="txt cap">Block 1</text>
+  <text x="40" y="95" class="txt">Calibration</text>
+  <text x="40" y="115" class="angle">Angles interleaved (0° & 90°)</text>
+
+  <rect x="240" y="40" width="180" height="80" class="blk"/>
+  <text x="250" y="70" class="txt cap">Block 2</text>
+  <text x="250" y="95" class="txt">Learning</text>
+  <text x="250" y="115" class="angle">Angle 1</text>
+
+  <rect x="450" y="40" width="180" height="80" class="blk"/>
+  <text x="460" y="70" class="txt cap">Block 3</text>
+  <text x="460" y="95" class="txt">Test</text>
+  <text x="460" y="115" class="angle">Angle 1</text>
+
+  <rect x="660" y="40" width="180" height="80" class="blk"/>
+  <text x="670" y="70" class="txt cap">Block 4</text>
+  <text x="670" y="95" class="txt">Learning</text>
+  <text x="670" y="115" class="angle">Angle 2</text>
+
+  <rect x="870" y="40" width="180" height="80" class="blk"/>
+  <text x="880" y="70" class="txt cap">Block 5</text>
+  <text x="880" y="95" class="txt">Test</text>
+  <text x="880" y="115" class="angle">Angle 2</text>
+
+  <!-- Palettes -->
+  <text x="240" y="150" class="palette">Palette A (e.g., blue/green) or Palette B (red/yellow)</text>
+  <text x="450" y="170" class="palette">Same as Block 2</text>
+  <text x="660" y="190" class="palette">Other palette (counterbalanced)</text>
+  <text x="870" y="210" class="palette">Same as Block 4</text>
+
+  <!-- Legend -->
+  <rect x="30" y="230" width="1020" height="70" fill="#fff" stroke="#ddd"/>
+  <text x="40" y="255" class="legend">Counterbalancing:</text>
+  <text x="200" y="255" class="legend">• Angle order randomized per participant (0°→90° or 90°→0°)</text>
+  <text x="200" y="275" class="legend">• Palette order randomized per participant (A first or B first)</text>
+  <text x="200" y="295" class="legend">• Low vs high color mapping randomized within each palette</text>
+</svg>

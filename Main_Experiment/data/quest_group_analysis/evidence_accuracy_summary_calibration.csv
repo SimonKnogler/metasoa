@@ -1,0 +1,2 @@
+condition,phase,n_trials,n_participants,correlation_mean_evidence,p_value_mean_evidence,mean_evidence_correct,mean_evidence_incorrect,accuracy
+Overall,calibration,97,1,0.1198302966153647,0.24235927484639216,7.274579299618065,6.3616047230756525,0.7628865979381443
