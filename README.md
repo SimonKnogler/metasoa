@@ -58,6 +58,10 @@ This is a complete, standalone package for running the Control Detection Task ex
 - **`analyze_quest_posteriors.py`** - Individual QUEST posterior analysis
 - **`entropy_benchmarks.py`** - QUEST entropy benchmarks
 
+### `CDT_Online/`
+- **Online version of the experiment for Pavlovia**
+- Exact replica of offline experiment logic
+
 ### `Data/`
 - **`quest_group_analysis/`** - Group analysis results and summary panels
 - **Individual participant data files will be stored here**
