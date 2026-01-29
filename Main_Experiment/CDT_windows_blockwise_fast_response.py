@@ -394,6 +394,88 @@ Press SPACE to continue""",
     win.flip()
     wait_keys(['space', 'escape'])
 
+def show_phase_transition(completed_block, next_block_info, rest_duration=30):
+    """
+    Show a rest screen between phases with countdown timer.
+    
+    Args:
+        completed_block: The block number just completed (1-5)
+        next_block_info: Brief neutral description of what comes next
+        rest_duration: Duration of mandatory rest in seconds (default 30)
+    """
+    # Create transition message
+    transition_msg = visual.TextStim(
+        win=win,
+        text="",
+        pos=(0, 100),
+        color='white',
+        height=30,
+        wrapWidth=800,
+        alignText='center'
+    )
+    
+    # Create countdown text
+    countdown_text = visual.TextStim(
+        win=win,
+        text='',
+        pos=(0, -50),
+        color='yellow',
+        height=80
+    )
+    
+    # Create "please wait" text
+    wait_text = visual.TextStim(
+        win=win,
+        text='Please rest. The experiment will continue shortly.',
+        pos=(0, -150),
+        color='gray',
+        height=20
+    )
+    
+    # Countdown phase
+    rest_clock = core.Clock()
+    while rest_clock.getTime() < rest_duration:
+        remaining_time = rest_duration - int(rest_clock.getTime())
+        
+        transition_msg.text = f"""Block {completed_block} Complete
+
+{next_block_info}"""
+        
+        countdown_text.text = str(remaining_time)
+        
+        transition_msg.draw()
+        countdown_text.draw()
+        wait_text.draw()
+        win.flip()
+        
+        # Check for escape during rest
+        if not SIMULATE:
+            keys = event.getKeys(['escape'])
+            if keys and 'escape' in keys:
+                _save()
+                core.quit()
+        
+        core.wait(0.1)
+    
+    # After countdown, show ready message
+    ready_msg = visual.TextStim(
+        win=win,
+        text=f"""Block {completed_block} Complete
+
+{next_block_info}
+
+Press SPACE when you are ready to continue.""",
+        pos=(0, 0),
+        color='white',
+        height=30,
+        wrapWidth=800,
+        alignText='center'
+    )
+    
+    ready_msg.draw()
+    win.flip()
+    wait_keys(['space', 'escape'])
+
 # ───────────────────────────────────────────────────────
 #  Trajectory Quality Control and Preprocessing
 # ───────────────────────────────────────────────────────
@@ -652,6 +734,81 @@ rotate = lambda vx, vy, a: (
     vx * math.cos(math.radians(a)) - vy * math.sin(math.radians(a)),
     vx * math.sin(math.radians(a)) + vy * math.cos(math.radians(a))
 )
+
+# ───────────────────────────────────────────────────────
+#  Progress Bar Class
+# ───────────────────────────────────────────────────────
+class ProgressBar:
+    """Displays experiment progress at top of screen."""
+    
+    def __init__(self, win, total_blocks=5):
+        self.win = win
+        self.total_blocks = total_blocks
+        self.current_block = 1
+        self.current_trial = 0
+        self.total_trials_in_block = 0
+        
+        # Progress bar background (gray)
+        self.bar_bg = visual.Rect(
+            win, width=400, height=20,
+            pos=(0, win.size[1]//2 - 40),
+            fillColor='gray', lineColor='white'
+        )
+        
+        # Progress bar fill (green)
+        self.bar_fill = visual.Rect(
+            win, width=0, height=18,
+            pos=(0, win.size[1]//2 - 40),
+            fillColor='green', lineColor=None
+        )
+        
+        # Block text
+        self.block_text = visual.TextStim(
+            win, text="Block 1 of 5",
+            pos=(0, win.size[1]//2 - 70),
+            color='white', height=18
+        )
+        
+        # Trial counter text
+        self.trial_text = visual.TextStim(
+            win, text="",
+            pos=(0, win.size[1]//2 - 40),
+            color='black', height=14
+        )
+    
+    def set_block(self, block_num, total_trials=0):
+        """Set current block and reset trial counter."""
+        self.current_block = block_num
+        self.current_trial = 0
+        self.total_trials_in_block = total_trials
+        self.block_text.text = f"Block {block_num} of {self.total_blocks}"
+    
+    def set_trial(self, trial_num):
+        """Update current trial number."""
+        self.current_trial = trial_num
+    
+    def draw(self):
+        """Draw progress bar and text."""
+        # Calculate fill width based on trial progress
+        if self.total_trials_in_block > 0:
+            progress = self.current_trial / self.total_trials_in_block
+            fill_width = 398 * progress
+            # Adjust position so bar fills from left to right
+            self.bar_fill.width = fill_width
+            self.bar_fill.pos = (-199 + fill_width/2, self.win.size[1]//2 - 40)
+            self.trial_text.text = f"{self.current_trial}/{self.total_trials_in_block}"
+        else:
+            self.bar_fill.width = 0
+            self.trial_text.text = ""
+        
+        self.bar_bg.draw()
+        self.bar_fill.draw()
+        self.block_text.draw()
+        if self.total_trials_in_block > 0:
+            self.trial_text.draw()
+
+# Create global progress bar instance
+progress_bar = ProgressBar(win)
 
 # Demo trial function removed as requested
 
@@ -1679,27 +1836,28 @@ def run_test_phase_for_angle(angle_bias, medium_trials_per_cue=50, learning_test
 def show_initial_instructions():
     instructions = [
         # Page 1: Welcome and overview
-        """Welcome to the study.
+        """Welcome to the Control Detection Study.
 
-On each trial you will see two moving shapes. Move your mouse as usual and decide which shape you had more control over.
+In this experiment, you will see two shapes moving on screen.
+Your task is to identify which shape you are controlling with your mouse.
 
-Please follow the on‑screen prompts. The session includes several blocks with quick breaks in between.
+The experiment consists of 5 blocks with short breaks in between.
+Total duration: approximately 60 minutes.
 
 Press SPACE to continue...""",
 
+        # Page 2: Response instructions
+        """Response Keys:
 
-        # Page 2: Speed-accuracy instructions
-        """Response instructions:
+Press A if you think you controlled the SQUARE
+Press S if you think you controlled the CIRCLE
 
-Please respond as quickly and accurately as possible. If you are unsure, make your best guess.
+Please respond as quickly and accurately as possible.
+If you are unsure, make your best guess.
 
 You have up to 5 seconds to respond on each trial.
 
-Use the keyboard:
-• Press A for Square
-• Press S for Circle
-
-Press SPACE to continue..."""
+Press SPACE to begin..."""
     ]
     
     for instruction in instructions:
@@ -1724,7 +1882,7 @@ if USE_QUEST_TRAINING:
     # Initialize global 4-staircase system
     initialize_global_quest()
     
-    # NEW EXPERIMENT STRUCTURE:
+    # EXPERIMENT STRUCTURE (internal names - not shown to participants):
     # Block 1: Calibration (both 0° and 90° interleaved)
     # Block 2: Learning (first angle from learning_order)
     # Block 3: Test (same angle as Block 2)
@@ -1735,18 +1893,29 @@ if USE_QUEST_TRAINING:
     # Set placeholder colors for calibration (black cues used anyway)
     low_col, high_col = "black", "black"
     
-    msg.text = "Block 1: Practice\n\nPress SPACE to start."
+    # Update progress bar for Block 1
+    progress_bar.set_block(1, CHECK_CALIBRATION_TRIALS * 4)  # 4 staircases
+    
+    msg.text = """Block 1 of 5
+
+In this block, you will practice the task.
+You will receive feedback after each response.
+
+Press SPACE to start..."""
     msg.draw(); win.flip(); wait_keys()
     
     run_calibration_both_angles(
-        max_trials_per_staircase=CHECK_CALIBRATION_TRIALS + 20 if not CHECK_MODE else CHECK_CALIBRATION_TRIALS,  # Allow extra for convergence in full mode
+        max_trials_per_staircase=CHECK_CALIBRATION_TRIALS + 20 if not CHECK_MODE else CHECK_CALIBRATION_TRIALS,
         min_trials_per_staircase=CHECK_CALIBRATION_TRIALS,
         sd_threshold=0.20
     )
     
-    # Show break between calibration and learning
-    msg.text = "Great job.\n\nYou can take a short break now.\n\nPress SPACE to continue."
-    msg.draw(); win.flip(); wait_keys()
+    # 30-second transition: Block 1 → Block 2
+    show_phase_transition(
+        completed_block=1,
+        next_block_info="In the next blocks, the shapes will appear in different colors.\nContinue responding the same way as before.",
+        rest_duration=30
+    )
     
     # === BLOCKS 2-5: LEARNING AND TEST PHASES ===
     first_angle, second_angle = learning_order[0], learning_order[1]
@@ -1756,46 +1925,88 @@ if USE_QUEST_TRAINING:
         low_col, high_col = (PALETTE_FOR_FIRST_ANGLE if current_angle == first_angle else PALETTE_FOR_SECOND_ANGLE)
         print(f"Block {phase_num} ({current_angle}°): Using colors {low_col} (low) and {high_col} (high)")
         
-        # Add break between blocks (but not before first learning block)
-        if phase_num > 2:
-            # Countdown timer for break
-            break_timer = visual.TextStim(win, "", color="white", height=80)
-            for seconds_left in range(60, 0, -1):
-                msg.text = f"Take a break - the next block will start in {seconds_left} seconds."
-                msg.pos = (0, 100)
-                break_timer.text = f"{seconds_left}"
-                break_timer.pos = (0, -50)
-                msg.draw()
-                break_timer.draw()
-                win.flip()
-                core.wait(1.0)
-            
-            # After countdown, show ready message
-            msg.text = "Press SPACE when you are ready."
-            msg.pos = (0, 0)  # Reset position
-            msg.draw(); win.flip()
-            wait_keys(['space', 'escape'])
-        
-        # Determine phase type
+        # Determine phase type (internal - not revealed to participant)
         is_learning_phase = (phase_num % 2 == 0)  # Even numbers (2,4) are learning, odd (3,5) are test
         
+        # Update progress bar
         if is_learning_phase:
-            # Learning phase
-            block_name = f"In the following, you will again see the same moving shapes, but with different colors. \n They will respond in a certain way to your mouse movements.\n Notice whethe r trials with one color seem easier than the others."
-            msg.text = f"{block_name}\n\nKeep using the same response rules.\nYou will receive brief feedback after each response.\n\nPress SPACE to start."
-            msg.draw(); win.flip(); wait_keys()
+            progress_bar.set_block(phase_num, CHECK_LEARNING_TRIALS_PER_CUE * 2)
+        else:
+            progress_bar.set_block(phase_num, (CHECK_TEST_MEDIUM_PER_CUE + CHECK_TEST_LEARNING_PER_CUE) * 2)
+        
+        if is_learning_phase:
+            # Learning phase - neutral messaging (no mention of color-difficulty association)
+            if phase_num == 2:
+                # First learning block
+                msg.text = """Block 2 of 5
+
+Continue identifying which shape you control.
+You will receive feedback after each response.
+
+Press SPACE to start..."""
+            else:
+                # Second learning block (Block 4)
+                msg.text = """Block 4 of 5
+
+The shapes will now appear in new colors.
+Continue responding as before.
+You will receive feedback after each response.
+
+Press SPACE to start..."""
             
+            msg.draw(); win.flip(); wait_keys()
             run_learning_phase_for_angle(current_angle, learning_trials_per_cue=CHECK_LEARNING_TRIALS_PER_CUE)
             
-        else:
-            # Test phase
-            block_name = f"Now onto the main trials."
-            msg.text = f"{block_name}\n\nContinue to respond as before.\n \n After each trial you will give a rating on how confident you are in your response.\n Additionally, you will rate how much control you felt you had over the shape. \nTry to use the full scales to answer both questions. \n \n No feedback will be shown in this block.\n\nPress SPACE to start."
-            msg.draw(); win.flip(); wait_keys()
+            # 30-second transition after learning phase
+            if phase_num == 2:
+                show_phase_transition(
+                    completed_block=2,
+                    next_block_info="In the next block, you will also rate your confidence\nand sense of control after each trial.",
+                    rest_duration=30
+                )
+            else:
+                show_phase_transition(
+                    completed_block=4,
+                    next_block_info="One more block to go!",
+                    rest_duration=30
+                )
             
-            run_test_phase_for_angle(current_angle, medium_trials_per_cue=CHECK_TEST_MEDIUM_PER_CUE, learning_test_trials_per_cue=CHECK_TEST_LEARNING_PER_CUE)
+        else:
+            # Test phase - neutral messaging
+            if phase_num == 3:
+                msg.text = """Block 3 of 5
 
-    # Final trajectory usage report
+Continue responding as before.
+
+After each trial, you will:
+1. Rate how confident you are in your response
+2. Rate how much control you felt over the shape
+
+Try to use the full range of each scale.
+No feedback will be shown in this block.
+
+Press SPACE to start..."""
+            else:
+                # Final block (Block 5)
+                msg.text = """Final Block (5 of 5)
+
+Continue responding and giving ratings as before.
+No feedback will be shown.
+
+Press SPACE to start..."""
+            
+            msg.draw(); win.flip(); wait_keys()
+            run_test_phase_for_angle(current_angle, medium_trials_per_cue=CHECK_TEST_MEDIUM_PER_CUE, learning_test_trials_per_cue=CHECK_TEST_LEARNING_PER_CUE)
+            
+            # 60-second transition after Block 3 (halfway point)
+            if phase_num == 3:
+                show_phase_transition(
+                    completed_block=3,
+                    next_block_info="Halfway Complete!\n\nYou have finished 3 of 5 blocks.\nTake a longer rest before continuing.",
+                    rest_duration=60
+                )
+
+    # Final trajectory usage report (internal logging only)
     final_used = len(used_trajectory_indices)
     primary_total = len(universal_trajectory_set_primary)
     overflow_total = len(universal_trajectory_set_overflow)
@@ -1808,6 +2019,12 @@ if USE_QUEST_TRAINING:
 
     # All reports logged to data file only - no output shown to participant
     
-    msg.text = "Thank you for participating in the experiment.\n\nYour data have been recorded.\n\nPress SPACE to exit."
+    # End screen
+    msg.text = """Experiment Complete
+
+Thank you for participating!
+Your responses have been saved.
+
+Press SPACE to exit."""
     msg.draw(); win.flip(); wait_keys()
     win.close(); core.quit()
