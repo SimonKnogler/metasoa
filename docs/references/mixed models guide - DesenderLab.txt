@@ -1,0 +1,810 @@
+mixed models guide - DesenderLab
+
+2024-12-09
+
+Introduction
+
+In this document, we outline the default pipeline that is used within DesenderLab when analyzing data using linear mixed models (LMMs). The main aim of this document is to streamline the way these models are used within the lab, so that there is as much coherence as possible. That being said, there are many arbitrary decisions in LMMs, so you can certainly deviate from the default pipeline reported here, but only if you have a good reason to do so. Note that this guide assumes that outliers have already been removed.
+
+We will work with an example data set where we want to examine the e!ect of di"culty (coh), reaction time manipulations (rt_manipulation) and conﬁdence reaction time manipulations (rtconf_manipulation) on reaction time (rt; continuous variable; for correct decisions only) by means of mixed models. In the data set used below, each participant (indicated by sub) completed multiple 2-alternative decision trials.
+
+Set-up
+
+Load the necessary packages.
+
+library(lme4)
+
+# Mixed models
+
+## Warning: package ’lme4’ was built under R version 4.2.3 ## Warning: package ’Matrix’ was built under R version 4.2.3 library(dplyr) # Programming shortcuts
+
+## Warning: package ’dplyr’ was built under R version 4.2.3 library(ggplot2) # Plotting
+
+## Warning: package ’ggplot2’ was built under R version 4.2.3 library(ggpubr) # Combine plots with ggarrange() library(ggResidpanel) # Visualizing model assumptions library(car) # Model interpretation library(arm) # Binned plots library(merTools) # Model visualization
+
+## Warning: package ’merTools’ was built under R version 4.2.3
+
+1
+
+library(effects) library(emmeans) library(DHARMa) library(lmerTest)
+
+# Plotting model results # Contrasts # Assumption checking # Adds p values of linear mixed models
+
+We will use data from https://github.com/StefHerregods/ConﬁdenceBounds/tree/main. Make sure to download the data and place it correctly with respect to your working directory.
+
+rm(list=ls()) # Empty environment setwd(dirname(rstudioapi::getSourceEditorContext()$path)) # Set working directory to current script loc df <- read.csv(file = "/Users/simonknogler/Downloads/exp2_data_viable.csv")
+
+Data preparation
+
+Make sure you have a good understanding of all columns of your data set.
+
+head(df)
+
+## ## 1 ## 2 ## 3 ## 4 ## 5 ## 6 ## ## 1 ## 2 ## 3 ## 4 ## 5 ## 6 ## ## 1 ## 2 ## 3 ## 4 ## 5 ## 6
+
+withinblocktrial block block_repetition rt resp cor cresp conf_press 0 4 1 1.2001415 [’n’] 1 right [’0’] 1 4 1 1.1660117 [’c’] 0 right [’9’] 2 4 1 1.1667766 [’c’] 1 left [’0’] 3 4 1 1.5840341 [’n’] 0 left [’0’] 4 4 1 1.0001315 [’n’] 1 right [’0’] 5 4 1 0.9509218 [’c’] 1 left [’0’] cj rtconf coherence slow_trial manipulation sub age gender handedness X 6 0.6174240 0.4 0 FastFast 1 18 Woman Right NA 5 0.5841204 0.1 0 FastFast 1 18 Woman Right NA 6 0.2837793 0.1 0 FastFast 1 18 Woman Right NA 6 0.3336552 0.1 0 FastFast 1 18 Woman Right NA 6 0.4338656 0.2 0 FastFast 1 18 Woman Right NA 6 0.3004324 0.1 0 FastFast 1 18 Woman Right NA batch check1 check2 check3 check4
+
+1 TRUE TRUE TRUE TRUE
+
+1 TRUE TRUE TRUE TRUE
+
+1 TRUE TRUE TRUE TRUE
+
+1 TRUE TRUE TRUE TRUE
+
+1 TRUE TRUE TRUE TRUE
+
+1 TRUE TRUE TRUE TRUE
+
+Some columns may be categorical, but are disguised as continuous values. lme4 will not recognize this by itself, so make sure to indicate categorical variables as factors. For this exercise, we will need the categorical variables coh, rt_manipulation, rtconf_manipulation and cor. (Note that the variables rt_manipulation and rtconf_manipulation have to be created manually from manipulation)
+
+# At first, coherence is numeric class(df$coherence)
+
+## [1] "numeric"
+
+2
+
+df <- df %>% mutate(rt_manipulation = as.factor(ifelse(df$manipulation %in% c("AccAcc", "AccFast"), 1, 0 rtconf_manipulation = as.factor(ifelse(df$manipulation %in% c("AccAcc", "FastAcc"), coherence = as.factor(coherence), cor = as.factor(cor)) df_correct <- subset(df, cor == 1)
+
+# Now we have a categorical variable class(df$coherence)
+
+## [1] "factor"
+
+We are performing a regression with reaction times as dependent variable. This might result in a bad ﬁt, because it violates the assumption of the identity link function that is used by default. In this example, we log transform and center the reaction times to improve model ﬁt. Note that this not per se default practice in the lab, but you should check what works best for your data.
+
+df_correct$rt_log <- log(df_correct$rt) df_correct$rt_log <- scale(df_correct$rt_log, scale = FALSE)
+
+Linear mixed e!ects model with a continuous dependent variable
+
+Do we need a mixed model?
+
+Mixed e!ects models allow us to model both ﬁxed and random e!ects:
+
+• Fixed e!ects: systematic e!ects, applicable to all rows of your data set.
+
+• Random e!ects: variations in e!ects between sub-groups of you data set (e.g., across subjects). These random e!ects may inﬂuence the intercept (random intercept) and/or the relationship between predictors and the outcome variable (random slopes). In summary, ﬁxed e!ects estimate the e!ect for the whole group, while random e!ects allow small per-subject deviations from this group-level e!ect.
+
+In the classic within-subject designs, where we have multiple trials for several subjects, we’ll almost always need mixed models due to individual di!erences in baseline e!ects (i.e., intercept) or linear relationships (i.e., slopes). One subjective way to investigate whether we really need to use mixed models over standard regressions, is by checking the relation between the dependent and independent variables, controlling for the grouping variable.
+
+In the plots below, each line summarizes the data from a single participant. The question we investigate here: is the relationship between the dependent variable (rt) and independent variables (coh, rt_manipulation, rtconf_manipulation) di!erent across participants? (Coherence seems to be the least di!erent)
+
+plot1 <- ggplot(df_correct, aes(x = rt_manipulation, y = rt_log, group = sub)) + stat_smooth(geom=!line!, alpha=1, se=FALSE) + theme_minimal() plot2 <- ggplot(df_correct, aes(x = rtconf_manipulation, y = rt_log, group = sub)) + stat_smooth(geom=!line!, alpha=1, se=FALSE) + theme_minimal() plot3 <- ggplot(df_correct, aes(x = coherence, y = rt_log, group = sub)) + stat_smooth(geom=!line!, alpha=1, se=FALSE) + theme_minimal()
+
+ggarrange(plot1, plot2, plot3, ncol=3)
+
+3
+
+0.6
+
+0.4
+
+0.3
+
+0.0
+
+0.0
+
+−0.4
+
+−0.3
+
+−0.8
+
+−1.2
+
+0
+
+1
+
+rt_manipulation
+
+rt_log
+
+rt_log
+
+Model building
+
+0.3
+
+0.0
+
+−0.3
+
+0
+
+1
+
+rtconf_manipulation
+
+rt_log
+
+0.1
+
+0.2
+
+coherence
+
+0.4
+
+To ﬁt a mixed e!ects model, you can use the lmer function from the lme4 package.
+
+lmer(outcome_variable ~ predictor_variables + (random_effects|grouping_variable), df)
+
+When choosing the parameters to include as ﬁxed and/or random a!ects, there are multiple strategies to choose from. Make sure to select a strategy before analyzing the data to avoid post-hoc decisions inﬂuencing your results.
+
+Within the lab, our default approach is to start with all ﬁxed e!ects and their interactions (unless you have a speciﬁc theory-driven structure), and then use a model building approach for determining the random intercept/slopes:
+
+• Start with only the random intercept
+
+• Try adding the ﬁxed e!ect parameters one by one as random slopes
+
+• Continue with the model that lowers AIC/BIC the most
+
+• After determining the lowest AIC/BIC model, compare model ﬁt with the previous model using a likelihood-ratio test (by means of anova())
+
+• Repeat until the addition of random e!ect parameters does not lead to signiﬁcantly improving model ﬁt
+
+RT_1 <- lmer(rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1|sub), data = df_correct) RT_2 <- lmer(rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rt_manipulation|sub),
+
+4
+
+data = df_correct) RT_3 <- lmer(rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rtconf_manipulation|s data = df_correct) RT_4 <- lmer(rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + coherence|sub), data = df_correct) # Boundary (singular) fit
+
+## boundary (singular) fit: see help(’isSingular’)
+
+The baseline model only includes a random intercept, as indicated by the 1 in (1|sub). investigated adding random slopes one by one.
+
+Next, we also
+
+Note that RT_4 returns Boundary (singular) ﬁt. This indicates that the model has di"culties with accurately estimating the random e!ects (likely because of too little variance captured by the random e!ects). As a result, this model cannot be reliably interpreted.
+
+After ﬁtting all models, we compute BIC and compare model ﬁt through likelihood ratio tests (LRTs). Importantly, LRTs can only be used for nested models. In addition, sometimes AIC and BIC will not agree. This is because BIC prefers less complex models compared to AIC.
+
+Furthermore, anova() reﬁts the models with REML = FALSE to make sure the comparison of likelihoods is interpretable. If you don’t want the models to be reﬁtted each likelihood ratio test, you can add REML = FALSE to each individual mixed model, and REML = TRUE for ﬁtting the ﬁnal, chosen model.
+
+anova(RT_1, RT_2)
+
+# Significant; BIC 21959
+
+## refitting model(s) with ML (instead of REML)
+
+## Data: df_correct ## Models:
+
+## RT_1: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 | sub) ## RT_2: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rt_manipulation | sub) ## npar AIC BIC logLik deviance Chisq Df Pr(>Chisq) ## RT_1 14 23608 23719 -11790 23580 ## RT_2 16 21832 21959 -10900 21800 1780.1 2 < 2.2e-16 *** ## --## Signif. codes: 0 ’***’ 0.001 ’**’ 0.01 ’*’ 0.05 ’.’ 0.1 ’ ’ 1
+
+anova(RT_1, RT_3)
+
+# Significant; BIC 23280
+
+## refitting model(s) with ML (instead of REML)
+
+## Data: df_correct ## Models:
+
+## RT_1: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 | sub) ## RT_3: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rtconf_manipulation | sub ## npar AIC BIC logLik deviance Chisq Df Pr(>Chisq) ## RT_1 14 23608 23719 -11790 23580 ## RT_3 16 23312 23439 -11640 23280 300.12 2 < 2.2e-16 *** ## --## Signif. codes: 0 ’***’ 0.001 ’**’ 0.01 ’*’ 0.05 ’.’ 0.1 ’ ’ 1
+
+RT_2 returns the lowest BIC values and ﬁts the data signiﬁcantly better. building upon this model.
+
+Therefore, we will continue
+
+5
+
+RT_5 <- lmer(rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rt_manipulation + rtc data = df_correct) anova(RT_2, RT_5) # Significant
+
+## refitting model(s) with ML (instead of REML)
+
+## Data: df_correct ## Models:
+
+## RT_2: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rt_manipulation | sub) ## RT_5: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rt_manipulation + rtconf_ ## npar AIC BIC logLik deviance Chisq Df Pr(>Chisq) ## RT_2 16 21832 21959 -10900 21800 ## RT_5 19 21496 21647 -10729 21458 342.08 3 < 2.2e-16 *** ## --## Signif. codes: 0 ’***’ 0.001 ’**’ 0.01 ’*’ 0.05 ’.’ 0.1 ’ ’ 1
+
+Again, the addition of an extra parameter improves model ﬁt signiﬁcantly. Finally, we will also add the interaction between both random e!ects (indicated by *).
+
+RT_6 <- lmer(rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rt_manipulation * rtc data = df_correct)
+
+anova(RT_5, RT_6)
+
+# Significant
+
+## refitting model(s) with ML (instead of REML)
+
+## Data: df_correct ## Models:
+
+## RT_5: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rt_manipulation + rtconf_ ## RT_6: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1 + rt_manipulation * rtconf_ ## npar AIC BIC logLik deviance Chisq Df Pr(>Chisq) ## RT_5 19 21496 21647 -10729 21458 ## RT_6 23 21369 21552 -10662 21323 134.73 4 < 2.2e-16 *** ## --## Signif. codes: 0 ’***’ 0.001 ’**’ 0.01 ’*’ 0.05 ’.’ 0.1 ’ ’ 1
+
+All random slope parameters are now added (with exception of the di"cult to estimate slopes for coherence), and the model ﬁt improves signiﬁcantly. Note that if one of the likelihood ratio tests was not signiﬁcant, we would not have added the random slope despite it possibly improving BIC.
+
+Now that we have converged to a model, let’s assess the model assumptions.
+
+Model assumptions
+
+• Independence between subjects
+
+– no need to check, this should be the consequence of your experimental design
+
+• Linear relationship between dependent and independent variables
+
+– Scatterplot of each individual predictor and interaction against the outcome variable
+
+• Normally distributed residuals
+
+6
+
+– ggResidpanel::resid_panel()
+
+– Q-Q plot, histogram of residuals
+
+• Homoscedasticity (constant variance of residuals)
+
+– ggResidpanel::resid_panel()
+
+– Residual plot
+
+• No multicollinearity - predictors are not highly correlated
+
+– car::vif()
+
+– Compute variance inﬂation factors (VIFs); VIFs should be below 10, preferably below 5
+
+– If you have categorical predictors, vif() will return generalized VIFs (GVIF) ∗ look at GVIFˆ(1/(2*Df)) ∗ this value should be below 3.2, preferably below 2.2 ∗ more information: https://www.bookdown.org/rwnahhas/RMPH/mlr-collinearity.html# generalized-vifs-when-at-least-one-predictor-is-categorical
+
+resid_panel(RT_6)
+
+Residual Plot
+
+Q−Q Plot
+
+5.0
+
+2.5
+
+0.0
+
+−2.5
+
+5.0
+
+2.5
+
+0.0
+
+−2.5
+
+5.0
+
+2.5
+
+0.0
+
+−2.5
+
+−1.0
+
+−0.5
+
+0.0
+
+0.5
+
+−4
+
+−2
+
+0
+
+2
+
+4
+
+Predicted Values
+
+Theoretical Quantiles
+
+Index Plot
+
+0
+
+5000
+
+Histogram
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+10000
+
+15000
+
+20000
+
+−2.5
+
+GVIF 1.107509 2.127629 16.641966 2.360370
+
+Df 1 1 2 1
+
+0.0
+
+2.5
+
+5.0
+
+Observation Number
+
+Pearson Residuals
+
+vif(RT_6)
+
+## ## rt_manipulation ## rtconf_manipulation ## coherence ## rt_manipulation:rtconf_manipulation
+
+GVIF^(1/(2*Df)) 1.052382 1.458639 2.019766 1.536349
+
+Pearson Residuals
+
+Pearson Residuals
+
+Density
+
+Sample Quantiles
+
+7
+
+## rt_manipulation:coherence 17.045090 ## rtconf_manipulation:coherence 18.394332 ## rt_manipulation:rtconf_manipulation:coherence 19.417851
+
+2
+
+2
+
+2
+
+2.031888
+
+2.070957
+
+2.099183
+
+In our example, the independence between subjects assumption is automatically met due to the experimental design. The linearity assumption also automatically holds, given that we only have binary predictors. While not perfect, the residuals seem to be normally distributed, and variance is relatively constant. Finally, GVIFˆ(1/(2*Df)) is below 2.2 for all parameters.
+
+If assumptions are not met (or you are in doubt about the model ﬁt), there are a few adaptations that can be considered.
+
+• Data transformation of variables (e.g., log transforming)
+
+• Di!erent link functions –> generalized linear mixed models (https://stats.oarc.ucla.edu/other/multpkg/introduction-to-generalized-linear-mixed-models/)
+
+• If VIFs are too high, you could consider combining or leaving out highly correlated parameters. However, make sure you still include all predictor variables you are investigating.
+
+Model interpretation
+
+To interpret the model parameters, we will use
+
+• summary() for an overview of model estimates
+
+• ﬁxef() for all ﬁxed e!ects estimates
+
+• ranef() for all random e!ect estimates
+
+• anova() (from the lmertest package) to interpret p values
+
+• conﬁnt() to estimate conﬁdence intervals
+
+First, let’s look at the ﬁxed e!ects, e!ects of parameters common across all rows of data. These values can be interpreted similarly as with simple linear regression. Since we have categorical predictions, make sure to check what coding scheme was used by R for the baseline categories! (E.g., you can see that rt_manipulation 0 was used as the baseline category. Rt_manipulation 1 shows the predicted di!erence in reaction time relative to rt_manipulation 0)
+
+fixef(RT_6)
+
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
+
+(Intercept)
+
+-0.138008515 rt_manipulation1
+
+0.334018120 rtconf_manipulation1
+
+0.092310926 coherence0.2
+
+-0.057379506 coherence0.4
+
+-0.150530685 rt_manipulation1:rtconf_manipulation1
+
+0.084694909 rt_manipulation1:coherence0.2
+
+-0.001121573 rt_manipulation1:coherence0.4
+
+-0.060785359
+
+8
+
+## rtconf_manipulation1:coherence0.2 ## -0.019979845 ## rtconf_manipulation1:coherence0.4 ## -0.051357556 ## rt_manipulation1:rtconf_manipulation1:coherence0.2 ## -0.014076784 ## rt_manipulation1:rtconf_manipulation1:coherence0.4 ## 0.006968193
+
+ranef() shows a list of all estimated random e!ects, which indicates di!erences between sub-groups (in this example di!erences between participants). For each participant separately, we can now see the estimated di!erences from the ﬁxed e!ects. For example, the intercept of sub 1 is estimated to be 0.119 higher than the intercept given by the ﬁxed e!ect.
+
+As discussed above, we did not include coherence as a random e!ect in the ﬁnal model. Therefore, no random slopes are estimated for this parameter.
+
+lapply(ranef(RT_6), head, 5)
+
+## $sub ## (Intercept) rt_manipulation1 rtconf_manipulation1 ## 1 0.11923597 -0.1763551 -0.02151060 ## 2 -0.11555034 0.2378625 -0.06185686 ## 3 0.05167556 -0.2758158 -0.13933395 ## 4 0.09867775 0.1725600 0.06889878 ## 5 -0.16722701 0.2803809 0.04647824 ## rt_manipulation1:rtconf_manipulation1 ## 1 0.006869494 ## 2 0.108570287 ## 3 0.121985085 ## 4 0.060746957 ## 5 0.166628139
+
+plotREsim(REsim(RT_6))
+
+9
+
+Effect Ranges
+
+sub
+
+1.0
+
+0.5
+
+0.0 −0.5 −1.0
+
+1.0
+
+0.5
+
+0.0 −0.5 −1.0
+
+1.0
+
+0.5
+
+0.0 −0.5 −1.0
+
+1.0
+
+0.5
+
+0.0 −0.5 −1.0
+
+Group
+
+As expected, summary() gives a summary of the model estimates. Aside from ﬁxed e!ects and their correlations, it also shows between- and within-group variances.
+
+• Between-group variance refers to variance explained by the random e!ects. Note that if you have a model with a singular ﬁt you’ll see that one of the variances here is really close to zero. Hence, it is not needed to include the speciﬁc random e!ect.
+
+• Within-group variance (= residual variance) is variance that remains, even after allowing for random e!ects.
+
+As a rule of thumb, random e!ects should explain > 5% of the total variance to be estimated reliably. If not, you could consider ﬁtting the model without the random e!ect.
+
+summary(RT_6)
+
+## Linear mixed model fit by REML. t-tests use Satterthwaite’s method [ ## lmerModLmerTest] ## Formula: rt_log ~ 1 + rt_manipulation * rtconf_manipulation * coherence + ## (1 + rt_manipulation * rtconf_manipulation | sub) ## Data: df_correct ## ## REML criterion at convergence: 21399.2 ## ## Scaled residuals:
+
+## Min 1Q Median 3Q Max ## -3.7129 -0.6806 -0.1159 0.5731 4.9465
+
+(Intercept)
+
+rt_manipulation1
+
+rt_manipulation1:rtconf_manipulation1
+
+rtconf_manipulation1
+
+Effect Range
+
+10
+
+## ## Random effects:
+
+## Groups Name Variance Std.Dev. Corr ## sub (Intercept) 0.06899 0.2627 ## rt_manipulation1 0.06300 0.2510 -0.52 ## rtconf_manipulation1 0.02284 0.1511 -0.08 -0.13 ## rt_manipulation1:rtconf_manipulation1 0.02640 0.1625 -0.25 0.08 ## Residual 0.15976 0.3997 ## ## ## ## ## -0.63 ## ## Number of obs: 20731, groups: sub, 40 ## ## Fixed effects:
+
+## Estimate Std. Error ## (Intercept) -1.380e-01 4.285e-02 ## rt_manipulation1 3.340e-01 4.236e-02 ## rtconf_manipulation1 9.231e-02 2.818e-02 ## coherence0.2 -5.738e-02 1.439e-02 ## coherence0.4 -1.505e-01 1.389e-02 ## rt_manipulation1:rtconf_manipulation1 8.470e-02 3.314e-02 ## rt_manipulation1:coherence0.2 -1.122e-03 2.023e-02 ## rt_manipulation1:coherence0.4 -6.078e-02 1.947e-02 ## rtconf_manipulation1:coherence0.2 -1.998e-02 2.028e-02 ## rtconf_manipulation1:coherence0.4 -5.136e-02 1.960e-02 ## rt_manipulation1:rtconf_manipulation1:coherence0.2 -1.408e-02 2.850e-02 ## rt_manipulation1:rtconf_manipulation1:coherence0.4 6.968e-03 2.749e-02 ## df t value Pr(>|t|) ## (Intercept) 4.229e+01 -3.220 0.00246 ## rt_manipulation1 4.641e+01 7.885 4.12e-10 ## rtconf_manipulation1 6.103e+01 3.276 0.00174 ## coherence0.2 2.057e+04 -3.988 6.70e-05 ## coherence0.4 2.057e+04 -10.840 < 2e-16 ## rt_manipulation1:rtconf_manipulation1 7.559e+01 2.556 0.01260 ## rt_manipulation1:coherence0.2 2.057e+04 -0.055 0.95578 ## rt_manipulation1:coherence0.4 2.057e+04 -3.122 0.00180 ## rtconf_manipulation1:coherence0.2 2.057e+04 -0.985 0.32451 ## rtconf_manipulation1:coherence0.4 2.057e+04 -2.621 0.00878 ## rt_manipulation1:rtconf_manipulation1:coherence0.2 2.057e+04 -0.494 0.62137 ## rt_manipulation1:rtconf_manipulation1:coherence0.4 2.057e+04 0.253 0.79993 ## ## (Intercept) ** ## rt_manipulation1 *** ## rtconf_manipulation1 ** ## coherence0.2 *** ## coherence0.4 *** ## rt_manipulation1:rtconf_manipulation1 * ## rt_manipulation1:coherence0.2 ## rt_manipulation1:coherence0.4 ** ## rtconf_manipulation1:coherence0.2 ## rtconf_manipulation1:coherence0.4 **
+
+11
+
+## rt_manipulation1:rtconf_manipulation1:coherence0.2 ## rt_manipulation1:rtconf_manipulation1:coherence0.4 ## --## Signif. codes: 0 ’***’ 0.001 ’**’ 0.01 ’*’ 0.05 ’.’ 0.1 ’ ’ 1 ## ## Correlation of Fixed Effects:
+
+## (Intr) rt_mn1 rtcn_1 chr0.2 chr0.4 rt_1:_1 rt_m1:0.2 rt_m1:0.4 ## rt_manpltn1 -0.533 ## rtcnf_mnpl1 -0.162 -0.010 ## coherenc0.2 -0.181 0.183 0.275 ## coherenc0.4 -0.187 0.189 0.285 0.558 ## rt_mnpl1:_1 -0.108 -0.097 -0.652 -0.234 -0.242 ## rt_mnp1:0.2 0.129 -0.255 -0.195 -0.711 -0.397 0.327 ## rt_mnp1:0.4 0.134 -0.265 -0.203 -0.398 -0.713 0.339 0.557 ## rtcnf_1:0.2 0.128 -0.130 -0.388 -0.710 -0.396 0.330 0.505 ## rtcnf_1:0.4 0.133 -0.134 -0.402 -0.396 -0.709 0.342 0.281 ## rt_1:_1:0.2 -0.091 0.181 0.276 0.505 0.282 -0.462 -0.710 ## rt_1:_1:0.4 -0.095 0.188 0.286 0.282 0.505 -0.479 -0.394 ## rtc_1:0.2 rtc_1:0.4 r_1:_1:0.2 ## rt_manpltn1 ## rtcnf_mnpl1 ## coherenc0.2 ## coherenc0.4 ## rt_mnpl1:_1 ## rt_mnp1:0.2 ## rt_mnp1:0.4 ## rtcnf_1:0.2 ## rtcnf_1:0.4 0.559 ## rt_1:_1:0.2 -0.712 ## rt_1:_1:0.4 -0.398
+
+0.283
+
+0.505
+
+-0.395
+
+-0.708
+
+-0.398
+
+-0.713
+
+0.558
+
+With the help of the anova() function, we can compute p values for the ﬁxed e!ects. Set type to 3 if you have interaction e!ects, or 2 for models without interaction e!ects.
+
+Note that this function only returns p values if the lmerTest() library was loaded while ﬁtting the models. As shown below, we reject the null hypothesis for most predictors.
+
+anova(RT_6, type = 3)
+
+## Type III Analysis of Variance Table with Satterthwaite’s method ## Sum Sq Mean Sq NumDF DenDF ## rt_manipulation 10.828 10.828 1 38.9 ## rtconf_manipulation 5.034 5.034 1 39.3 ## coherence 152.024 76.012 2 20569.4 ## rt_manipulation:rtconf_manipulation 1.375 1.375 1 38.9 ## rt_manipulation:coherence 3.489 1.744 2 20569.8 ## rtconf_manipulation:coherence 1.938 0.969 2 20571.3 ## rt_manipulation:rtconf_manipulation:coherence 0.104 0.052 2 20571.4 ## F value Pr(>F) ## rt_manipulation 67.7762 4.761e-10 *** ## rtconf_manipulation 31.5070 1.744e-06 *** ## coherence 475.7799 < 2.2e-16 *** ## rt_manipulation:rtconf_manipulation 8.6085 0.005590 **
+
+12
+
+## rt_manipulation:coherence 10.9190 1.822e-05 *** ## rtconf_manipulation:coherence 6.0651 0.002327 ** ## rt_manipulation:rtconf_manipulation:coherence 0.3252 0.722362 ## --## Signif. codes: 0 ’***’ 0.001 ’**’ 0.01 ’*’ 0.05 ’.’ 0.1 ’ ’ 1
+
+A visualization of signiﬁcant ﬁxed e!ects may give insight into the direction of the e!ects. You can get a full overview of all ﬁxed e!ects with plot(predictorE!ects()) or look at speciﬁc e!ects (with better customization) by extracting information with the e!ect() function.
+
+temp <- data.frame(effect(!rt_manipulation:rtconf_manipulation!, RT_6))
+
+## NOTE: rt_manipulation:rtconf_manipulation is not a high-order term in the model
+
+## Warning in Analyze.model(focal.predictors, mod, xlevels, default.levels, : the ## predictor rt_log is a one-column matrix that was converted to a vector
+
+ggplot(temp, aes(x=rt_manipulation, y=fit, group=rtconf_manipulation)) +
+
+geom_line(aes(linetype=rtconf_manipulation, color=rtconf_manipulation),linewidth=1.5)+ geom_point(aes(color=rtconf_manipulation),size=4)+ geom_errorbar(aes(ymin=fit-se, ymax=fit+se, color=rtconf_manipulation), width=0,linewidth=1.5) + theme(legend.position = c(0.7, 0.2)) + labs(x="rt_manipulation", color="rtconf_manipulation", shape="rtconf_manipulation",linetype="rtconf_ma
+
+## Warning: A numeric ‘legend.position‘ argument in ‘theme()‘ was deprecated in ggplot2 ## 3.5.0.
+
+## i Please use the ‘legend.position.inside‘ argument of ‘theme()‘ instead.
+
+## This warning is displayed once every 8 hours.
+
+## Call ‘lifecycle::last_lifecycle_warnings()‘ to see where this warning was ## generated.
+
+13
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+−0.1
+
+rtconf_manipulation
+
+0
+
+−0.2
+
+1
+
+0
+
+1
+
+rt_manipulation
+
+Related analyses
+
+Contrasts
+
+In practice, you will often encounter signiﬁcant interaction e!ects. As a result, main e!ects are not as easy to investigate. To interpret main e!ects in the presence of interaction e!ects, post hoc contrasts can be computed with the emmeans() function. These contrasts allow you to examine the e!ects of one predictor at speciﬁc levels of the interacting predictors.
+
+pairs(emmeans(RT_6, ~ rt_manipulation*rtconf_manipulation),adjust="Tukey")
+
+## ## ## ## ## ## ## ## ## ## ## ## ##
+
+contrast rt_manipulation0 rtconf_manipulation0 - rt_manipulation1 rtconf_manipulation0 rt_manipulation0 rtconf_manipulation0 - rt_manipulation0 rtconf_manipulation1 rt_manipulation0 rtconf_manipulation0 - rt_manipulation1 rtconf_manipulation1 rt_manipulation1 rtconf_manipulation0 - rt_manipulation0 rtconf_manipulation1 rt_manipulation1 rtconf_manipulation0 - rt_manipulation1 rtconf_manipulation1 rt_manipulation0 rtconf_manipulation1 - rt_manipulation1 rtconf_manipulation1 estimate SE df z.ratio p.value
+
+-0.3134 0.0405 Inf -7.741 <.0001
+
+-0.0685 0.0252 Inf -2.717 0.0333
+
+-0.4642 0.0449 Inf -10.341 <.0001
+
+0.2449 0.0496 Inf 4.939 <.0001
+
+-0.1509 0.0228 Inf -6.606 <.0001
+
+fit
+
+14
+
+## -0.3957 0.0496 Inf -7.972 <.0001 ## ## Results are averaged over the levels of: coherence ## Degrees-of-freedom method: asymptotic ## P value adjustment: tukey method for comparing a family of 4 estimates
+
+Generalized linear mixed models Model building Sometimes your data will not follow the assumptions of a linear mixed model. For example, you may have a binary outcome variable (e.g., accuracy) that is expected to stay between 0 and 1 rather than a linear relationship. In such cases, a generalized linear mixed model (GLM), which uses an additional link function to connect dependent and independent variables, can be helpful. Luckily for us, we can ﬁt GLMs similar as described above. Instead of lmer(), use glmer() and deﬁne the type of GLM you want to use. Below, we provide the syntax for a glmer model with a random intercept only, but note that you have to follow the same steps as above to determine the appropriate random e!ects structure.
+
+# Example model Cor_1 <- glmer(cor ~ 1 + rt_manipulation * rtconf_manipulation * coherence + (1|sub), data = df, family
+
+Model assumptions Importantly, because the link function is not the identity function, GLMs require di!erent approaches of assumption checking.
+
+For example, in the binomial model, we cannot interpret the residuals as easily with the same diagnostic plots as before. This is the consequence of having discrete data to ﬁt the model on, resulting in two ‘groups’ of residuals.
+
+resid_panel(Cor_1)
+
+15
+
+Residual Plot
+
+0.4
+
+0.6
+
+Q−Q Plot
+
+1
+
+4
+
+0
+
+0
+
+−1 −2
+
+1
+
+0
+
+−1 −2
+
+−4
+
+0.8
+
+−2.5
+
+0.0
+
+2.5
+
+Predicted Values
+
+10000
+
+20000
+
+Observation Number
+
+Theoretical Quantiles
+
+Index Plot
+
+Histogram
+
+0.9
+
+0.6
+
+0.3
+
+0.0
+
+0
+
+30000
+
+−2.5
+
+0.0
+
+2.5
+
+Deviance Residuals
+
+There are many approaches to assumption checking for GLMs. For binomial GLMs speciﬁcally, binning the residuals can give some insight into the structure of the residuals.
+
+binnedplot(fitted(Cor_1),
+
+residuals(Cor_1, type = "response"), nclass = NULL, xlab = "Expected Values", ylab = "Average residual", main = "Binned residual plot", cex.pts = 0.8, col.pts = 1, col.int = "gray")
+
+Deviance Residuals
+
+Deviance Residuals
+
+Density
+
+Sample Quantiles
+
+16
+
+Binned residual plot
+
+0.4
+
+0.5
+
+0.6 0.7 Expected Values
+
+0.8
+
+0.9
+
+Alternatively, the DHARMa package provides a streamlined approach to assumption checking in GLMs. This relatively popular package provides both visual and numerical functions to assess di!erent aspects of assumptions. The documentation site includes GLM case studies and provides steps to take when ﬁt is bad. https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html
+
+simulateResiduals(fittedModel = Cor_1, plot = T)
+
+Average residual
+
+−0.10
+
+0.00
+
+0.05
+
+0.10
+
+17
+
+DHARMa residual
+
+QQ plot residuals
+
+DHARMa residual vs. predicted
+
+KS test: p= 0.76007 Deviation n.s.
+
+Dispersion test: p= 0.976 Deviation n.s.
+
+Outlier test: p= 0.16263 Deviation n.s.
+
+0.0
+
+0.4
+
+0.8
+
+0.0
+
+0.4
+
+0.8
+
+Expected
+
+Model predictions (rank transformed)
+
+## Object of Class DHARMa with simulated residuals based on 250 simulations with refit = FALSE . See ?DH ## ## Scaled residual values: 0.9073596 0.05881662 0.4634968 0.3988284 0.7607582 0.9614261 0.7212111 0.7692
+
+Model interpretation Last but not least, p values of GLMs should be interpreted using the car::Anova() function, not to be confused with anova(). Type is set to 3 because there are interactions included in the ﬁxed e!ects.
+
+Anova(Cor_1, type = 3)
+
+## Analysis of Deviance Table (Type III Wald chisquare tests) ## ## Response: cor ## Chisq Df Pr(>Chisq) ## (Intercept) 27.7725 1 1.365e-07 *** ## rt_manipulation 2.7302 1 0.09847 . ## rtconf_manipulation 0.1746 1 0.67603 ## coherence 288.8438 2 < 2.2e-16 *** ## rt_manipulation:rtconf_manipulation 0.0000 1 0.99500 ## rt_manipulation:coherence 2.1049 2 0.34907 ## rtconf_manipulation:coherence 0.4401 2 0.80249 ## rt_manipulation:rtconf_manipulation:coherence 0.1482 2 0.92859 ## --## Signif. codes: 0 ’***’ 0.001 ’**’ 0.01 ’*’ 0.05 ’.’ 0.1 ’ ’ 1
+
+0.25
+
+DHARMa residual
+
+Observed
+
+0.00
+
+0.0
+
+0.2
+
+0.4
+
+0.50
+
+0.6
+
+0.75
+
+0.8
+
+1.00
+
+1.0
+
+18
+

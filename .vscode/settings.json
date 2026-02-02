@@ -1,5 +1,8 @@
 {
-    "python.defaultInterpreterPath": "C:\\Program Files\\PsychoPy\\python.exe",
-    "python.terminal.activateEnvironment": true
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.typeCheckingMode": "off",
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true
+    }
 }
-

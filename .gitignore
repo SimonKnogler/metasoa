@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data files - keep structure but ignore large files
+# Uncomment these if you want to exclude data from git:
+# Main_Experiment/data/subjects/*.csv
+# Main_Experiment/data/subjects/*_kinematics.csv
+
+# Simulated data (can be regenerated)
+Main_Experiment/data/subjects/simulated/
+Main_Experiment/data/subjects/simulated_realistic/
+
+# Analysis output (can be regenerated)
+Main_Experiment/data/analysis_output/
+Main_Experiment/data/quest_group_analysis/*.png
+
+# Motion library backups (keep main files only)
+Motion_Library/*_original_backup.*
+
+# VS Code (keep settings but ignore local state)
+.vscode/*.log
+.vscode/.ropeproject/

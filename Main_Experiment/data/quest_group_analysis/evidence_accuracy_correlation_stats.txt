@@ -1,0 +1,33 @@
+============================================================
+Evidence-Accuracy Correlation Analysis
+============================================================
+
+Total trials analyzed: 197
+
+Phase Distribution:
+  calibration_interleaved: 97 trials
+  learning_90: 57 trials
+  test_90: 43 trials
+
+Point-Biserial Correlation:
+  r = 0.1478
+  p-value = 3.8250e-02
+
+Logistic Regression (statsmodels):
+  Intercept: 0.4341 (p = 1.0408e-01)
+  Coefficient (evidence): 0.073820 (p = 4.0290e-02)
+  95% CI for coefficient: [0.003268, 0.144372]
+  AUC: 0.6046
+
+Descriptive Statistics:
+  Mean evidence per frame (correct trials): 7.06
+  Mean evidence per frame (incorrect trials): 5.56
+  SD evidence (correct trials): 4.53
+  SD evidence (incorrect trials): 4.76
+  Overall accuracy: 71.07%
+
+Evidence Range (mean per frame):
+  Minimum: -5.04
+  Maximum: 18.02
+  Mean: 6.63
+  Median: 5.48

@@ -769,6 +769,13 @@ class ProgressBar:
             color='white', height=18
         )
         
+        # Trial counter text
+        self.trial_text = visual.TextStim(
+            win, text="",
+            pos=(0, win.size[1]//2 - 40),
+            color='black', height=14
+        )
+    
     def set_block(self, block_num, total_trials=0):
         """Set current block and reset trial counter."""
         self.current_block = block_num
@@ -781,7 +788,7 @@ class ProgressBar:
         self.current_trial = trial_num
     
     def draw(self):
-        """Draw progress bar (visual only, no numbers)."""
+        """Draw progress bar and text."""
         # Calculate fill width based on trial progress
         if self.total_trials_in_block > 0:
             progress = self.current_trial / self.total_trials_in_block
@@ -789,12 +796,16 @@ class ProgressBar:
             # Adjust position so bar fills from left to right
             self.bar_fill.width = fill_width
             self.bar_fill.pos = (-199 + fill_width/2, self.win.size[1]//2 - 40)
+            self.trial_text.text = f"{self.current_trial}/{self.total_trials_in_block}"
         else:
             self.bar_fill.width = 0
+            self.trial_text.text = ""
         
         self.bar_bg.draw()
         self.bar_fill.draw()
         self.block_text.draw()
+        if self.total_trials_in_block > 0:
+            self.trial_text.draw()
 
 # Create global progress bar instance
 progress_bar = ProgressBar(win)
@@ -1094,7 +1105,7 @@ def run_trial(
         if SIMULATE:
             confidence_rating = float(rng.integers(1, 5))
         else:
-            msg.text = "How confident are you in your choice?\n\n1 = Guessing\n2 = Slightly confident\n3 = Fairly confident\n4 = Certain"
+            msg.text = "How confident are you in your choice?\n\n1 = Not at all confident\n2 = Slightly confident\n3 = Moderately confident\n4 = Very confident"
             msg.draw(); win.flip()
             
             confidence_keys = ['1', '2', '3', '4']
@@ -1120,9 +1131,9 @@ def run_trial(
             # Clear keyboard buffer to prevent carryover from confidence rating
             event.clearEvents(eventType='keyboard')
             
-            msg.text = "How much control did you feel over the shape's movement?\n\nUse the full range of the scale."
+            msg.text = "How much control did you feel over the shape's movement?"
             scale_positions = [(-450, -100), (-300, -100), (-150, -100), (0, -100), (150, -100), (300, -100), (450, -100)]
-            scale_labels = ["1\nNo control\n(moved on\nits own)","2","3","4\nUncertain","5","6","7\nComplete\ncontrol"]
+            scale_labels = ["1\nVery weak","2\nWeak","3\nSomewhat weak","4\nModerate","5\nSomewhat strong","6\nStrong","7\nVery strong"]
             scale_stimuli = [visual.TextStim(win, text=label, pos=pos, height=18, color='white', alignText='center')
                              for pos, label in zip(scale_positions, scale_labels)]
             rating = None
@@ -1968,10 +1979,10 @@ Press SPACE to start..."""
 Continue responding as before.
 
 After each trial, you will:
-1. Rate how confident you are (1 = Guessing to 4 = Certain)
-2. Rate how much control you felt (1 = No control to 7 = Complete control)
+1. Rate how confident you are in your response
+2. Rate how much control you felt over the shape
 
-Please use the FULL RANGE of each scale.
+Try to use the full range of each scale.
 No feedback will be shown in this block.
 
 Press SPACE to start..."""
@@ -1980,7 +1991,6 @@ Press SPACE to start..."""
                 msg.text = """Final Block (5 of 5)
 
 Continue responding and giving ratings as before.
-Remember to use the full range of the scales.
 No feedback will be shown.
 
 Press SPACE to start..."""
