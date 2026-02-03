@@ -321,76 +321,26 @@ def wait_keys(keys=None):
         return [rng.choice(allowed)]
     return event.waitKeys(keyList=keys)
 
-def show_break_screen(trials_completed, total_trials_in_block, block_num):
-    """Show a 30-second break screen with countdown timer."""
+def show_break_screen(trials_completed, total_trials_in_block, block_name):
+    """Show a simple break info screen (no countdown, just press SPACE to continue)."""
     
     # Create break message
     break_msg = visual.TextStim(
         win=win,
-        text=f"""BREAK TIME
-        
-Please take a short break. You have completed {trials_completed} trials.
-Progress: {trials_completed}/{total_trials_in_block} trials in Block {block_num}
+        text=f"""Short Break
 
-Break time remaining: 30 seconds""",
-        pos=(0, 50),
-        color='white',
-        height=30,
-        wrapWidth=800
-    )
-    
-    # Create countdown text
-    countdown_text = visual.TextStim(
-        win=win,
-        text='30',
-        pos=(0, -100),
-        color='yellow',
-        height=60
-    )
-    
-    # 30-second countdown
-    break_clock = core.Clock()
-    while break_clock.getTime() < 30.0:
-        remaining_time = 30 - int(break_clock.getTime())
-        countdown_text.text = str(remaining_time)
-        
-        # Update break message with current countdown
-        break_msg.text = f"""BREAK TIME
-        
-Please take a short break. You have completed {trials_completed} trials.
-Progress: {trials_completed}/{total_trials_in_block} trials in Block {block_num}
+You have completed {trials_completed} of {total_trials_in_block} trials in {block_name}.
 
-Break time remaining: {remaining_time} seconds"""
-        
-        break_msg.draw()
-        countdown_text.draw()
-        win.flip()
-        
-        # Check for escape during break
-        if not SIMULATE:
-            keys = event.getKeys(['escape'])
-            if keys and 'escape' in keys:
-                _save()
-                core.quit()
-        
-        core.wait(0.1)  # Small delay for smooth countdown
-    
-    # After countdown, show continue option
-    final_msg = visual.TextStim(
-        win=win,
-        text=f"""BREAK COMPLETE
-        
-You have completed {trials_completed} trials.
-Progress: {trials_completed}/{total_trials_in_block} trials in Block {block_num}
+Take a moment to rest if needed.
 
-Press SPACE to continue""",
+Press SPACE when you are ready to continue.""",
         pos=(0, 0),
         color='white',
-        height=30,
-        wrapWidth=800
+        height=28,
+        wrapWidth=900
     )
     
-    final_msg.draw()
+    break_msg.draw()
     win.flip()
     wait_keys(['space', 'escape'])
 
@@ -734,81 +684,6 @@ rotate = lambda vx, vy, a: (
     vx * math.cos(math.radians(a)) - vy * math.sin(math.radians(a)),
     vx * math.sin(math.radians(a)) + vy * math.cos(math.radians(a))
 )
-
-# ───────────────────────────────────────────────────────
-#  Progress Bar Class
-# ───────────────────────────────────────────────────────
-class ProgressBar:
-    """Displays experiment progress at top of screen."""
-    
-    def __init__(self, win, total_blocks=5):
-        self.win = win
-        self.total_blocks = total_blocks
-        self.current_block = 1
-        self.current_trial = 0
-        self.total_trials_in_block = 0
-        
-        # Progress bar background (gray)
-        self.bar_bg = visual.Rect(
-            win, width=400, height=20,
-            pos=(0, win.size[1]//2 - 40),
-            fillColor='gray', lineColor='white'
-        )
-        
-        # Progress bar fill (green)
-        self.bar_fill = visual.Rect(
-            win, width=0, height=18,
-            pos=(0, win.size[1]//2 - 40),
-            fillColor='green', lineColor=None
-        )
-        
-        # Block text
-        self.block_text = visual.TextStim(
-            win, text="Block 1 of 5",
-            pos=(0, win.size[1]//2 - 70),
-            color='white', height=18
-        )
-        
-        # Trial counter text
-        self.trial_text = visual.TextStim(
-            win, text="",
-            pos=(0, win.size[1]//2 - 40),
-            color='black', height=14
-        )
-    
-    def set_block(self, block_num, total_trials=0):
-        """Set current block and reset trial counter."""
-        self.current_block = block_num
-        self.current_trial = 0
-        self.total_trials_in_block = total_trials
-        self.block_text.text = f"Block {block_num} of {self.total_blocks}"
-    
-    def set_trial(self, trial_num):
-        """Update current trial number."""
-        self.current_trial = trial_num
-    
-    def draw(self):
-        """Draw progress bar and text."""
-        # Calculate fill width based on trial progress
-        if self.total_trials_in_block > 0:
-            progress = self.current_trial / self.total_trials_in_block
-            fill_width = 398 * progress
-            # Adjust position so bar fills from left to right
-            self.bar_fill.width = fill_width
-            self.bar_fill.pos = (-199 + fill_width/2, self.win.size[1]//2 - 40)
-            self.trial_text.text = f"{self.current_trial}/{self.total_trials_in_block}"
-        else:
-            self.bar_fill.width = 0
-            self.trial_text.text = ""
-        
-        self.bar_bg.draw()
-        self.bar_fill.draw()
-        self.block_text.draw()
-        if self.total_trials_in_block > 0:
-            self.trial_text.draw()
-
-# Create global progress bar instance
-progress_bar = ProgressBar(win)
 
 # Demo trial function removed as requested
 
@@ -1594,12 +1469,13 @@ def run_calibration_both_angles(max_trials_per_staircase=70, min_trials_per_stai
         thisExp.addData('prop_positive_evidence_preRT', res.get('prop_positive_evidence_preRT', np.nan))
         thisExp.nextEntry()
 
-        # Show break screen every 100 trials, but not at or after planned total
+        # Show break screen at 50% of calibration trials
         planned_total = min_trials_per_staircase * len(staircase_keys)
-        if (trial_counter % 100 == 0) and (trial_counter < planned_total):
-            show_break_screen(trial_counter, planned_total, "Calibration")
+        halfway_point = planned_total // 2
+        if trial_counter == halfway_point:
+            show_break_screen(trial_counter, planned_total, "Block 1 (Calibration)")
 
-def run_learning_phase_for_angle(angle_bias, learning_trials_per_cue=30):
+def run_learning_phase_for_angle(angle_bias, learning_trials_per_cue=30, block_num=2):
     """
     Learning phase: Fixed practice with colored cues for one specific angle
     Uses thresholds estimated from calibration phase
@@ -1693,11 +1569,13 @@ def run_learning_phase_for_angle(angle_bias, learning_trials_per_cue=30):
         thisExp.addData('prop_positive_evidence_preRT', res.get('prop_positive_evidence_preRT', np.nan))
         thisExp.nextEntry()
 
-        # Show break screen every 100 trials
-        if trial_counter % 100 == 0:
-            show_break_screen(trial_counter, len(learning_trials), f"Learning {angle_bias}°")
+        # Show break screen at 50% of learning trials
+        total_learning = len(learning_trials)
+        halfway_point = total_learning // 2
+        if trial_counter == halfway_point:
+            show_break_screen(trial_counter, total_learning, f"Block {block_num}")
 
-def run_test_phase_for_angle(angle_bias, medium_trials_per_cue=50, learning_test_trials_per_cue=25):
+def run_test_phase_for_angle(angle_bias, medium_trials_per_cue=50, learning_test_trials_per_cue=25, block_num=3):
     """
     Test phase: 150 trials total with mixed difficulty levels
     - 100 medium-level trials (50 per cue color) - tests generalization
@@ -1756,7 +1634,7 @@ def run_test_phase_for_angle(angle_bias, medium_trials_per_cue=50, learning_test
         trial_counter += 1
         global_trial_counter += 1
         expect_level = 'low' if cue_color == low_col else 'high'
-        
+
         res = run_trial(
             idx, "test", angle_bias=angle_bias, expect_level=expect_level, mode=difficulty_type,
             prop_override=prop_value, cue_dur_range=(0.5, 0.8), motion_dur=5.0
@@ -1825,9 +1703,12 @@ def run_test_phase_for_angle(angle_bias, medium_trials_per_cue=50, learning_test
         thisExp.addData('prop_positive_evidence_preRT', res.get('prop_positive_evidence_preRT', np.nan))
         thisExp.nextEntry()
         
-        # Show break screen every 100 trials
-        if trial_counter % 100 == 0:
-            show_break_screen(trial_counter, len(test_trials), f"Test {angle_bias}°")
+        # Show break screens at 33% and 66% of test trials
+        total_test = len(test_trials)
+        one_third = total_test // 3
+        two_thirds = (total_test * 2) // 3
+        if trial_counter == one_third or trial_counter == two_thirds:
+            show_break_screen(trial_counter, total_test, f"Block {block_num}")
 
 # ───────────────────────────────────────────────────────
 #  Initial Instructions
@@ -1893,9 +1774,6 @@ if USE_QUEST_TRAINING:
     # Set placeholder colors for calibration (black cues used anyway)
     low_col, high_col = "black", "black"
     
-    # Update progress bar for Block 1
-    progress_bar.set_block(1, CHECK_CALIBRATION_TRIALS * 4)  # 4 staircases
-    
     msg.text = """Block 1 of 5
 
 In this block, you will practice the task.
@@ -1928,12 +1806,6 @@ Press SPACE to start..."""
         # Determine phase type (internal - not revealed to participant)
         is_learning_phase = (phase_num % 2 == 0)  # Even numbers (2,4) are learning, odd (3,5) are test
         
-        # Update progress bar
-        if is_learning_phase:
-            progress_bar.set_block(phase_num, CHECK_LEARNING_TRIALS_PER_CUE * 2)
-        else:
-            progress_bar.set_block(phase_num, (CHECK_TEST_MEDIUM_PER_CUE + CHECK_TEST_LEARNING_PER_CUE) * 2)
-        
         if is_learning_phase:
             # Learning phase - neutral messaging (no mention of color-difficulty association)
             if phase_num == 2:
@@ -1955,7 +1827,7 @@ You will receive feedback after each response.
 Press SPACE to start..."""
             
             msg.draw(); win.flip(); wait_keys()
-            run_learning_phase_for_angle(current_angle, learning_trials_per_cue=CHECK_LEARNING_TRIALS_PER_CUE)
+            run_learning_phase_for_angle(current_angle, learning_trials_per_cue=CHECK_LEARNING_TRIALS_PER_CUE, block_num=phase_num)
             
             # 30-second transition after learning phase
             if phase_num == 2:
@@ -1996,7 +1868,7 @@ No feedback will be shown.
 Press SPACE to start..."""
             
             msg.draw(); win.flip(); wait_keys()
-            run_test_phase_for_angle(current_angle, medium_trials_per_cue=CHECK_TEST_MEDIUM_PER_CUE, learning_test_trials_per_cue=CHECK_TEST_LEARNING_PER_CUE)
+            run_test_phase_for_angle(current_angle, medium_trials_per_cue=CHECK_TEST_MEDIUM_PER_CUE, learning_test_trials_per_cue=CHECK_TEST_LEARNING_PER_CUE, block_num=phase_num)
             
             # 60-second transition after Block 3 (halfway point)
             if phase_num == 3:
