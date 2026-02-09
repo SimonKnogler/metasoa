@@ -51,8 +51,8 @@ Thumbs.db
 # Main_Experiment/data/subjects/*_kinematics.csv
 
 # Simulated data (can be regenerated)
-Main_Experiment/data/subjects/simulated/
-Main_Experiment/data/subjects/simulated_realistic/
+# Main_Experiment/data/subjects/simulated/
+# Main_Experiment/data/subjects/simulated_realistic/
 
 # Analysis output (can be regenerated)
 Main_Experiment/data/analysis_output/
